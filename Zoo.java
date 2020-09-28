@@ -1,27 +1,45 @@
 import java.io.InputStream;
 import java.util.Scanner;
+import java.util.Observer;
+import java.util.Observable;
+import java.util.concurrent.TimeUnit;
 
 public class Zoo {
     public static int days;
     public static Animal[] zooAnimals;
     public ZooKeeper z;
+    public ZooClock clock = new ZooClock();
 
     public Zoo(int days, Animal[] zooAnimals) {
         this.days = days;
         this.zooAnimals = zooAnimals;
     }
-    public static void runDaysAtZoo() {
+    public void runDaysAtZoo() throws InterruptedException {
         int i = 0;
         ZooKeeper z = new ZooKeeper(zooAnimals);
+        ZooFooServer fs = new ZooFooServer();
+        ZooAnnouncer a = new ZooAnnouncer();
+        this.clock.addObserver(z);
+        this.clock.addObserver(fs);
+        z.addObserver(a);
+        fs.addObserver(a);
         while (i < days) {
             System.out.println("Day " + (i+1));
             z.goToWork(i);
-            z.doJob();
+            fs.goToWork((i));
+            a.goToWork(i);
+            while (this.clock.getTime() < 20) {
+                this.clock.runClock();
+                TimeUnit.MILLISECONDS.sleep(100);
+            }
+            System.out.println("It's the end of the day!");
+            TimeUnit.MILLISECONDS.sleep(200);
+            this.clock.setTime(8);
             i++;
         }
     }
 
-    public static void main(String[] args){
+    public static void main(String[] args) throws InterruptedException {
         //need to instansiate the animals here first
         Lion Leo = new Lion("Leo the Lion");
         Lion Larry = new Lion("Larry the Lion");
@@ -53,8 +71,24 @@ public class Zoo {
     }
 }
 
+class ZooClock extends Observable {
+    private int hour = 8;
+    public void setTime(int hour) {
+        this.hour = hour;
+    }
+    public int getTime() {
+        return hour;
+    }
+    public void runClock() throws InterruptedException {
+        hour+=1;
+        setChanged();
+        notifyObservers();
+        clearChanged();
+    }
+}
 
-abstract class ZooEmployee {
+
+abstract class ZooEmployee extends Observable {
     protected boolean atWork = false;
     public void goToWork(int day) { //zoo should tell employees to go to work
         if(!atWork) { //just fun use of class attributes
@@ -66,14 +100,14 @@ abstract class ZooEmployee {
         System.out.println("leaving work");
         atWork=true;
     }
-    abstract public void doJob(); //an example of ABSTRACTION:
+    abstract public void doJob(int hour); //an example of ABSTRACTION:
     //since each employee has a different job to do, there is no default uniform job
     //so it is up to the type of employee (subclass) to define the job they have to do
 
 }
 
 
-class ZooKeeper extends ZooEmployee {
+class ZooKeeper extends ZooEmployee implements Observer{
     public Animal[] zooAnimals;
     public ZooKeeper(Animal[] zooAnimals) { //construct list of which animals a zookeeper is looking after
         this.zooAnimals = zooAnimals;
@@ -83,28 +117,39 @@ class ZooKeeper extends ZooEmployee {
         System.out.println("Zookeeper leaves the zoo for the night\n");
         atWork = false;
     }
-    public void doJob() { //implements doJob for ZooKeeper class
+    public void doJob(int hour) { //implements doJob for ZooKeeper class
         int animalNum = zooAnimals.length;
-        for (int i = 0; i < animalNum; i++) {
-            wakeAnimals(zooAnimals[i]);
+        if (hour == 9) {
+            for (int i = 0; i < animalNum; i++) {
+                wakeAnimals(zooAnimals[i]);
+            }
         }
-        System.out.println("ROLL CALL!!!\n"); //roll call outside loop
-        for (int i = 0; i < animalNum; i++) {
-            rollCallAnimals(zooAnimals[i]);
+        if (hour == 10) {
+            System.out.println("ROLL CALL!!!\n"); //roll call outside loop
+            for (int i = 0; i < animalNum; i++) {
+                rollCallAnimals(zooAnimals[i]);
+            }
         }
-        for (int i = 0; i < animalNum; i++) {
-            feedAnimals(zooAnimals[i]);
+        if (hour == 12) {
+            for (int i = 0; i < animalNum; i++) {
+                feedAnimals(zooAnimals[i]);
+            }
         }
-        for (int i = 0; i < animalNum; i++) {
-            exerciseAnimals(zooAnimals[i]);
+        if (hour == 14) {
+            for (int i = 0; i < animalNum; i++) {
+                exerciseAnimals(zooAnimals[i]);
+            }
         }
-        for (int i = 0; i < animalNum; i++) {
-            sleep(zooAnimals[i]);
+        if (hour == 19) {
+            for (int i = 0; i < animalNum; i++) {
+                sleep(zooAnimals[i]);
+            }
         }
-
-        leaveWork();
+        if (hour >= 20) {
+            leaveWork();
+        }
     }
-    public void wakeAnimals(Animal A){
+    public void wakeAnimals(Animal A) {
         System.out.println("Zookeeper wakes " + A.getName());
         A.wakeUp();
     }
@@ -115,15 +160,50 @@ class ZooKeeper extends ZooEmployee {
         System.out.println("Zookeeper feeds " + A.getName());
         A.Eat();
     }
-    public void exerciseAnimals(Animal A){
+    public void exerciseAnimals(Animal A) {
         System.out.println("Zookeeper tells " + A.getName() +" Exercises");
         A.Roam();
     }
-    public void sleep(Animal A){
+    public void sleep(Animal A) {
         System.out.println("Zookeeper tells " + A.getName() + " goes to Sleep");
         A.Sleep();
     }
+
+    @Override
+    public void update(Observable o, Object arg) {
+        System.out.println("doing job");
+        ZooClock c = (ZooClock) o;
+        int hour = c.getTime();
+        doJob(hour);
+    }
 }
+
+class ZooFooServer extends ZooEmployee implements Observer {
+
+    public void doJob(int hour) {
+
+    }
+
+    @Override
+    public void update(Observable o, Object arg) {
+        ZooClock c = (ZooClock) o;
+        int hour = c.getTime();
+        doJob(hour);
+    }
+}
+
+class ZooAnnouncer extends ZooEmployee implements Observer {
+
+    public void doJob(int hour) {
+
+    }
+
+    @Override
+    public void update(Observable o, Object arg) {
+
+    }
+}
+
 
 
 
