@@ -18,10 +18,13 @@ public class Zoo {
     public void runDaysAtZoo() throws InterruptedException {
         int i = 0;
         ZooKeeper z = new ZooKeeper(zooAnimals);
-        ZooFooServer fs = new ZooFooServer();
+        ZooFoodServer fs = new ZooFoodServer();
         ZooAnnouncer a = new ZooAnnouncer();
+        //all employees observe clock (observer pattern)
         this.clock.addObserver(z);
         this.clock.addObserver(fs);
+        this.clock.addObserver(a);
+        //zooannouncer observes zookeeper and foodserver (observer pattern)
         z.addObserver(a);
         fs.addObserver(a);
         while (i < days) {
@@ -35,7 +38,7 @@ public class Zoo {
             }
             System.out.println("It's the end of the day!");
             TimeUnit.MILLISECONDS.sleep(200);
-            this.clock.setTime(8);
+            this.clock.setTime(7);
             i++;
         }
     }
@@ -76,7 +79,7 @@ public class Zoo {
 }
 
 class ZooClock extends Observable {
-    private int hour = 8;
+    private int hour = 7;
     public void setTime(int hour) {
         this.hour = hour;
     }
@@ -85,6 +88,12 @@ class ZooClock extends Observable {
     }
     public void runClock() throws InterruptedException {
         hour+=1;
+        if(hour > 12) {
+          System.out.println(hour%12 + " PM");
+        } else {
+          System.out.println(hour + " AM");
+        }
+        //clock notifies observers when the clock changes
         setChanged();
         notifyObservers();
         clearChanged();
@@ -96,7 +105,7 @@ abstract class ZooEmployee extends Observable {
     protected boolean atWork = false;
     public void goToWork(int day) { //zoo should tell employees to go to work
         if(!atWork) { //just fun use of class attributes
-            System.out.println("Zookeeper arrives at zoo on Day " + (day+1) + " at the zoo!");
+            System.out.println("Employee arrives at zoo on Day " + (day+1) + " at the zoo!");
             atWork = true;
         }
     }
@@ -112,44 +121,76 @@ abstract class ZooEmployee extends Observable {
 
 
 class ZooKeeper extends ZooEmployee implements Observer{
+    public int tasks = 0;
     public Animal[] zooAnimals;
     public ZooKeeper(Animal[] zooAnimals) { //construct list of which animals a zookeeper is looking after
         this.zooAnimals = zooAnimals;
     }
-
+    public void goToWork(int day) { //zoo should tell employees to go to work
+        if(!atWork) { //just fun use of class attributes
+            System.out.println("Zookeeper arrives at zoo on Day " + (day+1) + " at the zoo!");
+            atWork = true;
+        }
+    }
     private void leaveWork() {
         System.out.println("Zookeeper leaves the zoo for the night\n");
         atWork = false;
+        tasks = 0;
     }
     public void doJob(int hour) { //implements doJob for ZooKeeper class
         int animalNum = zooAnimals.length;
         if (hour == 9) {
+            tasks+=1;
+            //keeper notifies observers when task occurs
+            setChanged();
+            notifyObservers();
+            clearChanged();
             for (int i = 0; i < animalNum; i++) {
                 wakeAnimals(zooAnimals[i]);
             }
         }
         if (hour == 10) {
+            tasks+=1;
+            //keeper notifies observers when task occurs
+            setChanged();
+            notifyObservers();
+            clearChanged();
             System.out.println("ROLL CALL!!!\n"); //roll call outside loop
             for (int i = 0; i < animalNum; i++) {
                 rollCallAnimals(zooAnimals[i]);
             }
         }
         if (hour == 12) {
+            tasks+=1;
+            //keeper notifies observers when task occurs
+            setChanged();
+            notifyObservers();
+            clearChanged();
             for (int i = 0; i < animalNum; i++) {
                 feedAnimals(zooAnimals[i]);
             }
         }
         if (hour == 14) {
+            tasks+=1;
+            //keeper notifies observers when task occurs
+            setChanged();
+            notifyObservers();
+            clearChanged();
             for (int i = 0; i < animalNum; i++) {
                 exerciseAnimals(zooAnimals[i]);
             }
         }
         if (hour == 19) {
+            tasks+=1;
+            //keeper notifies observers when task occurs
+            setChanged();
+            notifyObservers();
+            clearChanged();
             for (int i = 0; i < animalNum; i++) {
                 sleep(zooAnimals[i]);
             }
         }
-        if (hour >= 20) {
+        if (hour >= 20 && atWork) {
             leaveWork();
         }
     }
@@ -173,19 +214,55 @@ class ZooKeeper extends ZooEmployee implements Observer{
         A.Sleep();
     }
 
-    @Override
+    @Override //every update function is part of the observer pattern
     public void update(Observable o, Object arg) {
-        System.out.println("doing job");
         ZooClock c = (ZooClock) o;
         int hour = c.getTime();
         doJob(hour);
     }
 }
 
-class ZooFooServer extends ZooEmployee implements Observer {
+class ZooFoodServer extends ZooEmployee implements Observer {
+    public int servedFood = 0;
+    public void goToWork(int day) {
+        if(!atWork) {
+          System.out.println("Foodserver arrives at zoo on Day " + (day+1) + " at the zoo!");
+          atWork = true;
+        }
+    }
+    private void leaveWork() {
+        System.out.println("Foodserver leaves the zoo for the night\n");
+        atWork = false;
+        servedFood = 0;
+    }
 
     public void doJob(int hour) {
-
+        if(hour == 11 || hour == 16) {
+          makeFood();
+        }
+        if(hour == 12 || hour == 17) {
+          serveFood();
+        }
+        if(hour == 13 || hour == 18) {
+          cleanArea();
+        }
+        if(hour >= 19 && atWork) {
+          leaveWork();
+        }
+    }
+    public void makeFood() {
+        System.out.println("Food has been made.");
+    }
+    public void serveFood() {
+        //server notifies announcer when the food is served
+        servedFood+=1;
+        setChanged();
+        notifyObservers();
+        clearChanged();
+        System.out.println("Food has been served.");
+    }
+    public void cleanArea() {
+        System.out.println("Foodserver cleaning area");
     }
 
     @Override
@@ -197,14 +274,61 @@ class ZooFooServer extends ZooEmployee implements Observer {
 }
 
 class ZooAnnouncer extends ZooEmployee implements Observer {
+    public void goToWork(int day) {
+        if(!atWork) {
+          System.out.println("ZooAnnouncer arrives at zoo on Day " + (day+1) + " at the zoo!");
+          atWork = true;
+        }
+    }
+    private void leaveWork() {
+        System.out.println("ZooAnnouncer leaves the zoo for the night\n");
+        atWork = false;
+    }
 
     public void doJob(int hour) {
-
+      if(hour >= 20 && atWork) {
+        leaveWork();
+      }
     }
 
     @Override
     public void update(Observable o, Object arg) {
-
+      //instanceof to do this trick learned from https://stackoverflow.com/questions/4584541/check-if-a-class-object-is-subclass-of-another-class-object-in-java
+      if (o instanceof ZooKeeper) {
+        ZooKeeper z1 = (ZooKeeper) o;
+        switch(z1.tasks) {
+          case 1:
+            System.out.println("This is Zoo Announcer. The ZooKeeper is waking the animals");
+            break;
+          case 2:
+            System.out.println("This is Zoo Announcer. The ZooKeeper is rollcalling the animals");
+            break;
+          case 3:
+            System.out.println("This is Zoo Announcer. The ZooKeeper is feeding the animals");
+            break;
+          case 4:
+            System.out.println("This is Zoo Announcer. The ZooKeeper is exercising the animals");
+            break;
+          case 5:
+            System.out.println("This is Zoo Announcer. The ZooKeeper is putting the animals to sleep");
+            break;
+        }
+      }
+      if (o instanceof ZooFoodServer) {
+        ZooFoodServer fs1 = (ZooFoodServer) o;
+        switch(fs1.servedFood) {
+          case 1:
+            System.out.println("This is Zoo Announcer. Lunch is being served");
+            break;
+          case 2:
+            System.out.println("this is Zoo Announcer. Dinner is being served");
+        }
+      }
+      if (o instanceof ZooClock) {
+        ZooClock c1 = (ZooClock) o;
+        int hour = c1.getTime();
+        doJob(hour);
+      }
     }
 }
 
