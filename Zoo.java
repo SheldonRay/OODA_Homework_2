@@ -14,6 +14,7 @@ public class Zoo {
         this.days = days;
         this.zooAnimals = zooAnimals;
     }
+
     public void runDaysAtZoo() throws InterruptedException {
         int i = 0;
         ZooKeeper z = new ZooKeeper(zooAnimals);
@@ -24,7 +25,7 @@ public class Zoo {
         z.addObserver(a);
         fs.addObserver(a);
         while (i < days) {
-            System.out.println("Day " + (i+1));
+            System.out.println("Day " + (i + 1));
             z.goToWork(i);
             fs.goToWork((i));
             a.goToWork(i);
@@ -38,6 +39,7 @@ public class Zoo {
             i++;
         }
     }
+
 
     public static void main(String[] args) throws InterruptedException {
         //need to instansiate the animals here first
@@ -57,6 +59,8 @@ public class Zoo {
         Frog Francis = new Frog("Francis the Frog");
         Toad Tim = new Toad("Tim the Toad");
         Toad Toadete = new Toad("Toadete the Toad");
+        Doug.setFetchBehavior(new lazyFetch());//Strategy design implementation
+        Walter.setFetchBehavior(new fastFetch());//Delegation, and changing behavior of Doug on runtime
 
         Animal[] zooAnimals = {Leo, Larry, Charlie, Camy, Henry, Harley, Rich, Raven, Doug, Daniel, Walter, Waren, Fred, Francis, Tim, Toadete}; // All animals put into an Array
 
@@ -204,7 +208,36 @@ class ZooAnnouncer extends ZooEmployee implements Observer {
     }
 }
 
+interface fetchBehavior{// This is where fetch behavior/strategy pattern is implemented, it is implemented for the canine subclass
+    public void preformFetch();
+    public void setFetchBehavior(fetchBehavior fb);
+}
 
+class lazyFetch implements fetchBehavior{//This is not overwriting the dog/wolf class but being changed at runtime, dog is lazy
+
+    @Override
+    public void preformFetch() {
+        System.out.println(" lazily fetches");
+    }
+
+    @Override
+    public void setFetchBehavior(fetchBehavior fb) {
+        return;//We wont be using this
+    }
+}
+
+class fastFetch implements fetchBehavior{//wolf gets the fast fetch, but it can be changed if the program were to be user dependant
+
+    @Override
+    public void preformFetch() {
+        System.out.println(" fetches with haste");
+    }
+
+    @Override
+    public void setFetchBehavior(fetchBehavior fb) {
+        return;//We wont be using this
+    }
+}
 
 
 abstract class Animal { //an example of an ABSTRACT CLASS:
@@ -222,7 +255,6 @@ abstract class Animal { //an example of an ABSTRACT CLASS:
     //the name differentiates between which object is which
     //names can technically be the same. a better Identity would be a UID (unique Identifying number)
     //although there is no reason to implement a UID in this project
-
     public void setName(String s) { //changes protected name variable
         name = s;
     }
@@ -333,7 +365,15 @@ class Cat extends Feline{
 //End all Felines
 
 //Start all Canines
-abstract class Canine extends Animal {
+ abstract class Canine extends Animal implements fetchBehavior {
+    fetchBehavior canFetch;//creating the interface for the strategy pattern
+
+    public void setFetchBehavior(fetchBehavior fb) {
+        canFetch = fb ;//set the fetch behavior for the dog/wolf
+    }
+    public void preformFetch(){
+        canFetch.preformFetch();
+    }
 
 }
 
@@ -353,6 +393,7 @@ class Dog extends Canine{
     public void makeNoise() {
         System.out.println(name + " Barks\n");
     }
+
 }
 
 class Wolf extends Canine {
@@ -363,6 +404,7 @@ class Wolf extends Canine {
         System.out.println(name + " Howls\n");
     }
 }
+
 //End all Canines
 
 //Start all Amphibians
